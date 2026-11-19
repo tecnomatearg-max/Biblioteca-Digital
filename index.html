@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Biblioteca">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Mi biblioteca y lector</title>
+<style>
+:root{--bg:#f3f4f7;--panel:#fff;--ink:#202331;--muted:#707585;--line:#e2e5ec;--accent:#6558d3}
+body.dark{color-scheme:dark;--bg:#11131a;--panel:#1c202b;--ink:#f1f2f7;--muted:#a6adbd;--line:#343a49;--accent:#a69cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{text-align:center;padding:18px 14px 10px}h1{font-size:1.3rem;margin:0 0 4px}header p{color:var(--muted);margin:0;font-size:.9rem}
+main{max-width:900px;margin:auto;padding:10px 13px 30px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:15px;margin-bottom:12px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.btn{border:0;border-radius:11px;padding:10px 14px;background:var(--accent);color:white;font-weight:650;cursor:pointer;font-size:.92rem}.btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn:disabled{opacity:.4}
+input,select{width:100%;padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;margin:5px 0 9px}
+label{font-size:.9rem;font-weight:600}small,.muted{color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row .btn{flex:0 0 auto}
+.hidden{display:none!important}#results,#shelf{display:grid;gap:9px;margin-top:12px}.item{border:1px solid var(--line);border-radius:13px;padding:12px}.item strong{display:block}.item p{font-size:.86rem;color:var(--muted);margin:4px 0 10px}.item .row{justify-content:space-between}
+#reader{overflow:hidden;padding:0}
+/* Modo lectura inmersivo: ocupa toda la pantalla del teléfono */
+body.reading{overflow:hidden;background:#08090d}
+body.reading header,body.reading main>.tabs,body.reading #searchPanel,body.reading #shelfPanel{display:none!important}
+body.reading main{position:static;max-width:none;margin:0;padding:0}
+body.reading #reader{display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;width:100%;height:100vh;height:100dvh;margin:0;border:0;border-radius:0;padding:0;background:#08090d;overflow:hidden}
+body.reading .bookbar{display:none!important}
+body.reading .bookbar .filename{color:#e7e8ef;max-width:75%;font-size:.78rem}
+body.reading .progress{display:none!important}
+body.reading #stage{flex:1 1 100%;min-height:0;height:100%;width:100%;padding:0;margin:0;overflow:hidden;background:#08090d;perspective:1200px;touch-action:pan-y}
+body.reading .page-wrap{height:100%;width:100%;align-items:center;justify-content:center;position:relative;overflow:hidden}
+body.reading .page-wrap canvas{display:block;max-width:100%;max-height:100%;width:auto!important;height:auto!important;object-fit:contain;box-shadow:none}
+body.reading .nav{display:none!important}
+body.reading .nav .btn{padding:10px 13px;font-size:.86rem}
+body.reading .counter{color:#e3e4ec;min-width:64px;font-size:.9rem}
+body.reading #status{display:none!important}
+#exitReader{padding:5px 10px;font-size:.78rem}
+/* Esquina doblándose al pasar de página */
+.page-wrap .turn-effect{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.page-wrap .turn-effect:after{content:"";position:absolute;top:0;right:0;width:min(42%,190px);height:min(42%,190px);background:linear-gradient(135deg,#fff 0%,#f0eee8 38%,#b8b5ae 70%,#5b5b5b 100%);clip-path:polygon(100% 0,100% 100%,0 0);filter:drop-shadow(-5px 6px 7px #0005);transform-origin:100% 0;animation:curlNext .48s ease-out forwards}
+.page-wrap .turn-effect.prev:after{right:auto;left:0;clip-path:polygon(0 0,100% 0,0 100%);transform-origin:0 0;animation:curlPrev .48s ease-out forwards}
+@keyframes curlNext{0%{transform:rotateY(0) scale(1);opacity:.95}55%{transform:rotateY(-58deg) scale(.9);opacity:.85}100%{transform:rotateY(-100deg) scale(.72);opacity:0}}
+@keyframes curlPrev{0%{transform:rotateY(0) scale(1);opacity:.95}55%{transform:rotateY(58deg) scale(.9);opacity:.85}100%{transform:rotateY(100deg) scale(.72);opacity:0}}
+@media(min-width:700px){body.reading #stage{padding:12px 18px}body.reading .page-wrap canvas{max-height:100%;max-width:100%}}.bookbar{padding:11px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.filename{font-size:.88rem;color:var(--muted);overflow-wrap:anywhere}.progress{height:4px;background:var(--line)}.progress div{height:100%;width:0;background:var(--accent)}
+#stage{min-height:50vh;display:flex;align-items:center;justify-content:center;padding:12px;background:var(--bg);touch-action:pan-y}.page-wrap{width:100%;display:flex;justify-content:center}.page-wrap canvas{max-width:100%;height:auto;background:white;box-shadow:0 4px 20px #0002}
+.empty{text-align:center;color:var(--muted);padding:35px 15px}.nav{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--line)}.counter{color:var(--muted);font-variant-numeric:tabular-nums;min-width:85px;text-align:center}
+#status{font-size:.84rem;color:var(--muted);text-align:center;padding:5px 12px 12px;min-height:30px}
+@media(min-width:700px){#stage{min-height:70vh;padding:20px} .page-wrap canvas{max-height:76vh;width:auto}}
+</style>
+</head>
+<body>
+<header><h1>📚 Mi biblioteca digital</h1><p>Buscá libros, guardá tu colección y retomá exactamente donde dejaste.</p></header>
+<main>
+<div class="tabs">
+ <button class="btn" id="tabSearch">Buscar libros</button>
+ <button class="btn secondary" id="tabShelf">Mi biblioteca</button>
+ <button class="btn secondary" id="tabReader">Lector</button>
+ <button class="btn secondary" id="theme">🌙 Oscuro</button>
+</div>
+<section class="panel" id="searchPanel">
+ <h3>Buscar en catálogos gratuitos</h3>
+ <label for="query">Título o autor</label>
+ <div class="row"><input id="query" placeholder="Ej.: Orgullo y prejuicio, Jane Austen"><button class="btn" id="searchBtn">Buscar</button></div>
+ <small>Se consultan Project Gutenberg e Internet Archive. La disponibilidad de PDF y los permisos dependen de cada obra.</small>
+ <div id="results"></div>
+ <div class="item" style="margin-top:14px">
+  <strong>Buscar en Z-Library</strong>
+  <p>Se abrirá el sitio en otra pestaña. Iniciá sesión allí si corresponde y descargá el libro solo si tenés autorización. Después podés incorporarlo a tu biblioteca con el botón de abajo.</p>
+  <div class="row"><button class="btn" id="openZlib">Abrir Z-Library ↗</button><label class="btn secondary" for="pdfInput">＋ Importar PDF descargado</label></div>
+  <small>El acceso usa el dominio del enlace de lectura que compartiste anteriormente. No guardamos usuarios, contraseñas ni enlaces privados.</small>
+ </div>
+</section>
+<section class="panel hidden" id="shelfPanel">
+ <div class="row"><div><h3>Mi biblioteca</h3><small>Los libros guardados conservan su propia página.</small></div><label class="btn secondary" for="pdfInput">＋ Añadir PDF</label><input id="pdfInput" class="hidden" type="file" accept="application/pdf,.pdf"></div>
+ <div id="shelf"></div>
+</section>
+<section class="panel hidden" id="reader">
+ <div class="bookbar"><span class="filename" id="bookName">Todavía no abriste un libro</span><span class="muted" id="saveInfo">Progreso automático</span><button class="btn secondary" id="exitReader" type="button">‹ Biblioteca</button></div>
+ <div class="progress"><div id="bar"></div></div>
+ <div id="stage"><div class="empty"><div style="font-size:2.5rem">📖</div>Elegí un libro de tu biblioteca o cargá un PDF.</div></div>
+ <div class="nav"><button class="btn secondary" id="prev" disabled>← Anterior</button><span class="counter" id="counter">— / —</span><button class="btn" id="next" disabled>Siguiente →</button></div>
+ <div id="status">Al volver a abrir este archivo en el mismo navegador y dispositivo, intentaremos restaurar tu última lectura.</div>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+let db,pdf=null,currentId=null,page=1,rendering=false,pending=null,touchX=0,touchY=0,lastSection='search',readerStateArmed=false,turnDirection='next';
+const DB='miBibliotecaPDF_v2',STORE='books';
+function say(t){$('status').textContent=t}
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)})}
+function tx(mode='readonly'){return db.transaction(STORE,mode).objectStore(STORE)}
+function get(id){return new Promise((res,rej)=>{let r=tx().get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function put(obj){return new Promise((res,rej)=>{let r=tx('readwrite').put(obj);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+function all(){return new Promise((res,rej)=>{let r=tx().getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updated||0)-(a.updated||0)));r.onerror=()=>rej(r.error)})}
+function remove(id){return new Promise((res,rej)=>{let r=tx('readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+function safe(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function show(which){if(which!=='reader')lastSection=which;['search','shelf','reader'].forEach(x=>$(x+'Panel')?.classList.toggle('hidden',x!==which));$('reader').classList.toggle('hidden',which!=='reader');if(which==='reader')enterImmersive();else leaveImmersive();}
+function requestImmersiveFullscreen(){const root=document.documentElement;if(!document.fullscreenElement&&root.requestFullscreen){root.requestFullscreen().catch(()=>{});}}
+function enterImmersive(){document.body.classList.add('reading');if(!readerStateArmed){history.pushState({bookReader:true},'','#leyendo');readerStateArmed=true}requestImmersiveFullscreen();}
+function leaveImmersive(){document.body.classList.remove('reading');if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});}
+function exitToLibrary(){if(readerStateArmed){readerStateArmed=false;history.back()}else{show(lastSection)}}
+window.addEventListener('popstate',()=>{if(document.body.classList.contains('reading')){readerStateArmed=false;leaveImmersive();$('reader').classList.add('hidden');$(lastSection+'Panel')?.classList.remove('hidden');}});
+async function drawShelf(){
+ const books=await all();$('shelf').innerHTML='';
+ if(!books.length){$('shelf').innerHTML='<div class="empty">Todavía no guardaste libros. Buscá uno o añadí un PDF.</div>';return}
+ books.forEach(b=>{const d=document.createElement('div');d.className='item';d.innerHTML=`<strong>${safe(b.title)}</strong><p>${safe(b.author||'Autor desconocido')} · ${b.pages?`Página ${b.page||1} de ${b.pages}`:'PDF guardado'}</p><div class="row"><button class="btn open">Continuar leyendo</button><button class="btn secondary del">Quitar</button></div>`;d.querySelector('.open').onclick=()=>{requestImmersiveFullscreen();openBook(b.id)};d.querySelector('.del').onclick=async()=>{if(confirm('¿Quitar este libro y su progreso guardado?')){await remove(b.id);if(currentId===b.id){pdf=null;currentId=null}$('stage').innerHTML='<div class="empty">Elegí un libro para leer.</div>';await drawShelf()}};$('shelf').appendChild(d)})
+}
+async function openBook(id){
+ try{const b=await get(id);if(!b)throw Error('No se encontró el libro');if(!window.pdfjsLib)throw Error('No se pudo cargar el lector PDF. Revisá tu conexión.');
+ currentId=id;$('bookName').textContent=b.title;show('reader');say('Abriendo tu libro guardado…');
+ pdf=await pdfjsLib.getDocument({data:new Uint8Array(await b.blob.arrayBuffer())}).promise;
+ b.pages=pdf.numPages;page=Math.min(Math.max(1,b.page||1),pdf.numPages);await put(b);await render(page);say('¡Listo! Tu lectura quedó restaurada.');await drawShelf();
+ }catch(e){say('No se pudo abrir el libro: '+e.message)}
+}
+async function render(n){
+ if(!pdf)return;turnDirection=n>=page?'next':'prev';if(rendering){pending=n;return}rendering=true;page=Math.max(1,Math.min(n,pdf.numPages));
+ try{const p=await pdf.getPage(page),v0=p.getViewport({scale:1}),stage=$('stage'),availW=Math.max(120,stage.clientWidth-2),availH=Math.max(160,stage.clientHeight-2),scale=Math.min(availW/v0.width,availH/v0.height),v=p.getViewport({scale}),c=document.createElement('canvas'),ctx=c.getContext('2d'),ratio=Math.min(devicePixelRatio||1,2);
+ c.width=Math.floor(v.width*ratio);c.height=Math.floor(v.height*ratio);c.style.width=v.width+'px';c.style.height=v.height+'px';ctx.setTransform(ratio,0,0,ratio,0,0);$('stage').innerHTML='';let w=document.createElement('div');w.className='page-wrap';w.append(c);$('stage').append(w);await p.render({canvasContext:ctx,viewport:v}).promise;const fx=document.createElement('div');fx.className='turn-effect '+turnDirection;w.append(fx);setTimeout(()=>fx.remove(),520);
+ const b=await get(currentId);b.page=page;b.pages=pdf.numPages;b.updated=Date.now();await put(b);$('saveInfo').textContent='Guardado ✓';$('counter').textContent=page+' / '+pdf.numPages;$('bar').style.width=(page/pdf.numPages*100)+'%';$('prev').disabled=page<=1;$('next').disabled=page>=pdf.numPages;
+ }catch(e){say('Error al mostrar la página.');}
+ rendering=false;if(pending!==null){let q=pending;pending=null;render(q)}
+}
+async function addPDF(file){
+ if(!file)return;if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){alert('Elegí un archivo PDF.');return}
+ const id='local-'+file.name+'-'+file.size+'-'+file.lastModified;
+ await put({id,title:file.name.replace(/\.pdf$/i,''),author:'PDF personal',blob:file,page:1,updated:Date.now(),source:'local'});
+ await drawShelf();await openBook(id)
+}
+async function fetchJSON(url,timeout=15000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);try{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(timer)}}
+async function search(){
+ const q=$('query').value.trim();if(!q){say('Escribí un título o autor para buscar.');return}
+ $('results').innerHTML='<div class="empty">Buscando en los catálogos…</div>';$('searchBtn').disabled=true;
+ try{
+  const [g,i]=await Promise.allSettled([
+   fetchJSON('https://gutendex.com/books/?search='+encodeURIComponent(q)),
+   fetchJSON('https://archive.org/advancedsearch.php?q='+encodeURIComponent('mediatype:texts AND (title:"'+q+'" OR creator:"'+q+'")')+'&fl[]=identifier,title,creator&rows=12&page=1&output=json')
+  ]);
+  let results=[];
+  if(g.status==='fulfilled')for(const b of (g.value.results||[]).slice(0,12)){const formats=b.formats||{};const url=formats['application/pdf']||formats['application/epub+zip']||formats['text/plain; charset=utf-8']||formats['text/plain'];if(url)results.push({title:b.title,author:(b.authors||[]).map(a=>a.name).join(', '),url,kind:'gutenberg',format:url.toLowerCase().includes('.pdf')?'PDF':'Texto/EPUB',id:'gut-'+b.id})}
+  if(i.status==='fulfilled')for(const b of (i.value.response?.docs||[]).slice(0,12))results.push({title:b.title,author:Array.isArray(b.creator)?b.creator.join(', '):b.creator||'',kind:'archive',identifier:b.identifier,format:'Consultar formatos',id:'ia-'+b.identifier});
+  $('results').innerHTML='';
+  if(!results.length){const failed=g.status==='rejected'&&i.status==='rejected';$('results').innerHTML='<div class="empty">'+(failed?'Los catálogos no respondieron dentro del tiempo esperado. Revisá tu conexión y volvé a intentar. También podés usar la búsqueda de Z-Library de abajo.':'No encontramos resultados disponibles para esa búsqueda. Probá con otro título o autor, o consultá Z-Library.')+'</div>';return}
+  results.forEach(b=>{const d=document.createElement('div');d.className='item';d.innerHTML=`<strong>${safe(b.title)}</strong><p>${safe(b.author||'Autor no indicado')} · ${safe(b.format)}</p><div class="row"><button class="btn action">${b.kind==='archive'?'Ver disponibilidad':'Abrir / guardar'}</button></div>`;d.querySelector('button').onclick=()=>b.kind==='archive'?archiveDetails(b):openCatalogBook(b);$('results').appendChild(d)})
+ }catch(e){$('results').innerHTML='<div class="empty">No se pudo conectar con los catálogos. Revisá tu conexión e intentá otra vez.</div>'}
+ finally{$('searchBtn').disabled=false}
+}
+async function archiveDetails(b){
+ try{say('Consultando archivos disponibles…');const r=await fetch('https://archive.org/metadata/'+encodeURIComponent(b.identifier));const j=await r.json();const files=j.files||[];const f=files.find(x=>String(x.name||'').toLowerCase().endsWith('.pdf')&&!x.name.includes('_text.pdf'));
+ if(!f){alert('Esta ficha no ofrece un PDF descargable identificado. Puede haber otros formatos o un préstamo sujeto a las condiciones de Internet Archive.');return}
+ const url='https://archive.org/download/'+encodeURIComponent(b.identifier)+'/'+f.name;
+ await downloadAndSave({id:'ia-'+b.identifier,title:b.title,author:b.author,url});}
+ catch(e){alert('No pudimos comprobar el PDF. Abrí la ficha de Internet Archive para consultar sus opciones y condiciones.');}
+}
+async function openCatalogBook(b){
+ if(b.format==='Texto/EPUB'){if(!b.url.toLowerCase().includes('.pdf')){window.open(b.url,'_blank','noopener');say('Este resultado está disponible en otro formato, no como PDF.');return}}
+ await downloadAndSave({id:b.id,title:b.title,author:b.author,url:b.url})
+}
+async function downloadAndSave(b){
+ try{say('Descargando el archivo autorizado…');const r=await fetch(b.url);if(!r.ok)throw Error('El servidor no permitió la descarga directa');const blob=await r.blob();if(blob.type!=='application/pdf'&&!b.url.toLowerCase().includes('.pdf'))throw Error('El archivo no parece ser un PDF');await put({id:b.id,title:b.title,author:b.author,blob,page:1,updated:Date.now(),source:'catalog'});await drawShelf();await openBook(b.id)}
+ catch(e){say('No se pudo importar automáticamente: '+e.message+' Podés abrir la ficha del catálogo o cargar un PDF descargado.')}
+}
+$('searchBtn').onclick=search;$('query').addEventListener('keydown',e=>{if(e.key==='Enter')search()});
+$('openZlib').onclick=()=>window.open('https://z-library.sk/','_blank','noopener,noreferrer');
+$('pdfInput').onchange=e=>{addPDF(e.target.files[0]);e.target.value=''};
+$('tabSearch').onclick=()=>show('search');$('tabShelf').onclick=async()=>{show('shelf');await drawShelf()};$('tabReader').onclick=()=>{requestImmersiveFullscreen();show('reader')};$('exitReader').onclick=exitToLibrary;
+$('prev').onclick=()=>render(page-1);$('next').onclick=()=>render(page+1);
+$('theme').onclick=()=>{document.body.classList.toggle('dark');let d=document.body.classList.contains('dark');$('theme').textContent=d?'☀️ Claro':'🌙 Oscuro';localStorage.setItem('lib-theme',d?'dark':'light')};
+if(localStorage.getItem('lib-theme')==='dark'){document.body.classList.add('dark');$('theme').textContent='☀️ Claro'}
+$('stage').addEventListener('touchstart',e=>{if(e.touches.length===1){touchX=e.touches[0].clientX;touchY=e.touches[0].clientY}},{passive:true});
+$('stage').addEventListener('touchend',e=>{if(!pdf||!e.changedTouches.length)return;let dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.25)render(page+(dx<0?1:-1))},{passive:true});
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>pdf&&render(page),200)});
+(async()=>{try{await openDB();await drawShelf();const books=await all();if(books.length){await openBook(books[0].id)}else show('search')}catch(e){say('Tu navegador no permite guardar la biblioteca localmente. Probá con Chrome y habilitá el almacenamiento.')}})();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+</script>
+</body></html>

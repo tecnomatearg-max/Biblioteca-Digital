@@ -1,0 +1,14 @@
+MI BIBLIOTECA DIGITAL — PAQUETE PWA
+
+Contenido:
+- index.html: lector inmersivo original preparado para instalarse.
+- manifest.webmanifest: nombre, icono y modo de aplicación.
+- sw.js: caché básica de los archivos de la aplicación.
+- icon.svg: icono de Mi Biblioteca.
+
+IMPORTANTE:
+Para instalarla como aplicación PWA real en Android, estos archivos deben publicarse juntos en un sitio con HTTPS.
+Después, abrí la dirección publicada en Chrome Android, elegí "Instalar aplicación" o "Añadir a pantalla principal".
+
+El archivo HTML por sí solo puede abrirse localmente, pero no permite registrar un service worker PWA desde content:// o file://.
+Los libros guardados permanecen en el almacenamiento del navegador del dispositivo; no se transfieren automáticamente entre navegadores o instalaciones.
